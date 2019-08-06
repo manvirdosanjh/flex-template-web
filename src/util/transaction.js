@@ -54,6 +54,12 @@ export const TRANSITION_EXPIRE_CUSTOMER_REVIEW_PERIOD = 'transition/expire-custo
 export const TRANSITION_EXPIRE_PROVIDER_REVIEW_PERIOD = 'transition/expire-provider-review-period';
 export const TRANSITION_EXPIRE_REVIEW_PERIOD = 'transition/expire-review-period';
 
+export const TRANSITION_REQUEST = 'transition/request';
+export const TRANSITION_INSTABOOK = 'transition/instabook';
+export const TRANSITION_CUSTOMER_CANCEL = 'transition/customer-cancel';
+export const TRANSITION_DISABLE_CANCELLATION = 'transition/disable-cancellation';
+
+
 /**
  * Actors
  *
@@ -95,6 +101,8 @@ const STATE_REVIEWED = 'reviewed';
 const STATE_REVIEWED_BY_CUSTOMER = 'reviewed-by-customer';
 const STATE_REVIEWED_BY_PROVIDER = 'reviewed-by-provider';
 
+const STATE_ACCEPTED_NO_CANCELLATION = 'accepted-no-cancellation';
+
 /**
  * Description of transaction process
  *
@@ -108,7 +116,7 @@ const stateDescription = {
   // id is defined only to support Xstate format.
   // However if you have multiple transaction processes defined,
   // it is best to keep them in sync with transaction process aliases.
-  id: 'preauth-with-nightly-booking/release-1',
+  id: 'custom-pricing-with-instabook/release-1',
 
   // This 'initial' state is a starting point for new transaction
   initial: STATE_INITIAL,
@@ -117,24 +125,11 @@ const stateDescription = {
   states: {
     [STATE_INITIAL]: {
       on: {
-        [TRANSITION_ENQUIRE]: STATE_ENQUIRY,
-        [TRANSITION_REQUEST_PAYMENT]: STATE_PENDING_PAYMENT,
-      },
-    },
-    [STATE_ENQUIRY]: {
-      on: {
-        [TRANSITION_REQUEST_PAYMENT_AFTER_ENQUIRY]: STATE_PENDING_PAYMENT,
+        [TRANSITION_REQUEST]: STATE_PREAUTHORIZED,
+        [TRANSITION_INSTABOOK]: STATE_ACCEPTED,
       },
     },
 
-    [STATE_PENDING_PAYMENT]: {
-      on: {
-        [TRANSITION_EXPIRE_PAYMENT]: STATE_PAYMENT_EXPIRED,
-        [TRANSITION_CONFIRM_PAYMENT]: STATE_PREAUTHORIZED,
-      },
-    },
-
-    [STATE_PAYMENT_EXPIRED]: {},
     [STATE_PREAUTHORIZED]: {
       on: {
         [TRANSITION_DECLINE]: STATE_DECLINED,
@@ -147,6 +142,13 @@ const stateDescription = {
     [STATE_ACCEPTED]: {
       on: {
         [TRANSITION_CANCEL]: STATE_CANCELED,
+        [TRANSITION_CUSTOMER_CANCEL]: STATE_CANCELED,
+        [TRANSITION_DISABLE_CANCELLATION]: STATE_ACCEPTED_NO_CANCELLATION,
+      },
+    },
+
+    [STATE_ACCEPTED_NO_CANCELLATION]: {
+      on: {
         [TRANSITION_COMPLETE]: STATE_DELIVERED,
       },
     },
@@ -335,3 +337,8 @@ export const getUserTxRole = (currentUserId, transaction) => {
 
 export const txRoleIsProvider = userRole => userRole === TX_TRANSITION_ACTOR_PROVIDER;
 export const txRoleIsCustomer = userRole => userRole === TX_TRANSITION_ACTOR_CUSTOMER;
+
+export const txIsAcceptedNoCancellation = tx =>
+  getTransitionsToState(STATE_ACCEPTED_NO_CANCELLATION).includes(
+    txLastTransition(tx)
+  );
